@@ -1,4 +1,6 @@
-# AntGuardian
+# AntGuardian (updated)
+
+*updated to support latest antminer protocol, and with more fuctional UI
 
 AntMiner monitor and auto-restart tool
 
