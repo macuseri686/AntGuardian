@@ -10,6 +10,11 @@ Scans the local network for miners. Once connected, restarts any miner when acce
 
 This software and all its dependencies are free and open source. Free as in free speach not as in free beer, meaning it respects your freedom! Please star on GitHub and share with your miner friends!
 
+### Screenshot
+
+![Screenshot from 2024-02-09 18-42-00](https://github.com/macuseri686/AntGuardian/assets/1278401/bc21c9bc-f016-47c0-9686-d800d81adb6b)
+
+
 ### Prerequisites
 
 * NMap
