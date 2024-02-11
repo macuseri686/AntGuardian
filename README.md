@@ -12,7 +12,7 @@ This software and all its dependencies are free and open source. Free as in free
 
 ### Screenshot
 
-![Screenshot from 2024-02-09 18-42-00](https://github.com/macuseri686/AntGuardian/assets/1278401/bc21c9bc-f016-47c0-9686-d800d81adb6b)
+![Screenshot from 2024-02-11 12-12-38](https://github.com/macuseri686/AntGuardian/assets/1278401/51fade10-de03-44ef-8836-81ba755f0798)
 
 
 ### Prerequisites
