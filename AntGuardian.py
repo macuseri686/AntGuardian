@@ -15,6 +15,7 @@ SECONDS_4_CHECKS = 95
 SECONDS_TO_INTERNET = 60
 
 log_messages = []
+log_focus = 0
 
 class Miner(object):
     def __init__(self, ip):
@@ -50,8 +51,9 @@ class Miner(object):
         try:
             with requests.get(f'http://{self.__ip}/cgi-bin/pools.cgi', auth=HTTPDigestAuth(USER, PASS)) as r:
                 log_message(f"Checking {self.__ip}...")
+
                 cont = json.loads(r.text)
-                if self.__acceptedShares != 0 and int(cont['POOLS'][0]['accepted']) == self.__acceptedShares and self.__active == True:
+                if self.__acceptedShares != 0 and int(cont['POOLS'][0]['accepted']) == self.__acceptedShares and self.__active == True and cont['POOLS'][0]["status"] != "Dead":
                     self.__active = False
                     self.reboot()
                 else:
@@ -75,7 +77,7 @@ class Miner(object):
 
     def reboot(self):
         try:
-            log_message(f"Rebooting {self.__ip}...")
+            log_message(f"Rebooting {self.__ip}...", "highlight_red")
             requests.get(f'http://{self.__ip}//cgi-bin/reboot.cgi', auth=HTTPDigestAuth(USER, PASS))
             self.__lastRebooted = datetime.datetime.now()
             self.__alive = False
@@ -110,7 +112,9 @@ def discover_miners():
     return ipList
 
 def update_display(loop, data):
+    global log_focus
     header, miner_list, table, log_listbox = data
+    log_focus = log_listbox.get_focus()[1] or 0
     current_time = datetime.datetime.now().strftime('%Y-%m-%d %I:%M:%S %p')
     header.set_text(('header', f"AntGuardian - {current_time}"))
     
@@ -118,6 +122,7 @@ def update_display(loop, data):
         # only update every SECONDS_4_CHECKS seconds by checking the last time it was updated
         if (datetime.datetime.now() - miner._Miner__lastUpdated).seconds > SECONDS_4_CHECKS or miner._Miner__updateCount == 0:
             miner.update()
+            log_listbox.body = urwid.SimpleFocusListWalker([urwid.Text(message) for message in log_messages])
         
     table_contents = [
         (urwid.AttrMap(urwid.Padding(urwid.Text('IP Address'), left=1, right=1), 'table_header'), table.options()),
@@ -145,24 +150,32 @@ def update_display(loop, data):
         else:
             table_contents.append((urwid.AttrMap(urwid.Text(" "+active), 'highlight_red'), table.options()))
 
-
     table.contents = table_contents
     
     # if the size of the terminal has changed, update the table size
     current_terminal_width = urwid.raw_display.Screen().get_cols_rows()[0]-6
     table.cell_width = math.floor(current_terminal_width/6)
 
-    # Update log messages display
-    log_listbox.body = urwid.SimpleFocusListWalker([urwid.Text(message) for message in log_messages])
+    # First, get the current focus and the total number of messages
+    focus_widget, focus_pos = log_listbox.get_focus()
+    total_messages = len(log_messages)
 
-    log_listbox.set_focus(len(log_messages)-1)
+    # Check if the last message is focused. Since focus_pos is zero-based, compare it with total_messages - 1
+    if focus_pos == total_messages - 2 or focus_pos == 0:
+        # This means we're at the bottom, so set the focus to the new last message
+        log_listbox.set_focus(len(log_messages)-1)
     
     loop.set_alarm_in(1, update_display, data)  # Update every second for the clock
 
-def log_message(message):
+# message - string, style - string (optional)
+def log_message(message, style=""):
     global log_messages
     current_time = datetime.datetime.now().strftime('%Y-%m-%d %I:%M:%S %p')
-    log_messages.append(f"{current_time} - {message}")
+    if style == "":
+        log_messages.append((current_time + " - " + message))
+    else:
+        log_messages.append((style, f"{current_time} - {message}"))
+
 
 def main():
     global log_messages
@@ -190,14 +203,16 @@ def main():
 
     pile = urwid.Pile(pile_contents)
 
-    frame = urwid.Frame(pile, header=header)
+    main_content_with_style = urwid.AttrMap(pile, 'body')
+    frame = urwid.Frame(main_content_with_style, header=header)
 
 
     palette = [
         ('header', 'white,bold', 'dark red'),
         ('table_header', 'black,bold', 'white'),
         ('highlight_green', 'white', 'dark green'),
-        ('highlight_red', 'white', 'dark red')
+        ('highlight_red', 'white', 'dark red'),
+        ('body', 'dark gray', 'light gray'),
     ]
 
     loop = urwid.MainLoop(frame, palette)
