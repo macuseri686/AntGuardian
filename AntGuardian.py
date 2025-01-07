@@ -378,9 +378,10 @@ class MinerDetailsDialog(urwid.WidgetWrap):
         # Calculate chart width based on dialog size
         screen = urwid.raw_display.Screen()
         terminal_width = screen.get_cols_rows()[0]
-        dialog_width = int(terminal_width * 0.8)  # 80% of terminal width (from overlay)
+        dialog_width = int(terminal_width * 0.8)  # 80% of terminal width
         performance_box_width = int((dialog_width * 0.6) - 4)  # 60% of dialog width minus borders
-        chart_width = performance_box_width - 11  # Changed from 12 to 11 to make chart one char wider
+        label_width = 10  # Width for the hashrate labels
+        chart_width = performance_box_width - label_width  # Removed the -2 to make chart 2 chars wider
         
         history = self.miner._Miner__hashrate_history
         
@@ -406,24 +407,31 @@ class MinerDetailsDialog(urwid.WidgetWrap):
             
             # Create the chart line
             line = ""
-            threshold = hashrate
-            for _, rate in history:
+            visible_history = history[-chart_width:] if len(history) > chart_width else history
+            for _, rate in visible_history:
                 rate_th = rate / 1000  # Convert to TH/s
-                line += "█" if rate_th >= threshold else " "
+                line += "█" if rate_th >= hashrate else " "
             
-            # Use tuples for text styling
-            chart_lines.append(urwid.Text([('chart_label', label), ('chart_data', line)]))
+            # Pad line to exact width
+            line = line.ljust(chart_width)
+            
+            # Create the row with fixed widths
+            row = urwid.Columns([
+                ('fixed', label_width, urwid.Text(('chart_label', label))),
+                ('fixed', chart_width, urwid.Text(('chart_data', line)))
+            ])
+            chart_lines.append(row)
         
         # Create X-axis line
-        x_axis = "└" + "─" * 8 + "┴" + "─" * chart_width
+        x_axis = "└" + "─" * (label_width-2) + "┴" + "─" * chart_width
         chart_lines.append(urwid.Text(('chart_axis', x_axis)))
         
         # Add time labels
         if len(history) > 1:
-            first_time = history[0][0]
+            visible_start = history[-chart_width][0] if len(history) > chart_width else history[0][0]
             last_time = history[-1][0]
-            time_label = f"{first_time.strftime('%H:%M:%S')}".ljust(8)
-            time_label += " " * (chart_width - 16)  # Space between labels
+            time_label = f"{visible_start.strftime('%H:%M:%S')}".ljust(label_width-1)
+            time_label += " " * (chart_width - 8)  # Adjust spacing between labels
             time_label += f"{last_time.strftime('%H:%M:%S')}"
             chart_lines.append(urwid.Text(('chart_label', time_label)))
         
